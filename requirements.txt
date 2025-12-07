@@ -1,0 +1,7 @@
+# Git AutoPush has no external dependencies!
+# Uses only Python standard library
+
+# Optional: For PDF generation (if not already installed)
+# The script will work without this, just won't generate PDFs
+# Uncomment if you want PDF support and don't have md2pdf:
+# reportlab>=3.6.0
