@@ -469,14 +469,19 @@ AUTOPUSH_GUIDE.pdf
             if choice in ('', 'y', 'yes'):
                 if self.create_repo_with_gh_cli(github_info):
                     # Repository created successfully, proceed to push
-                    pass
+                    self.push_changes(github_info)
+                    return True
                 else:
                     # Fall back to manual creation
                     self.logger.warning("Falling back to manual repository creation")
                     self.manual_repo_creation_instructions(github_info)
+                    self.push_changes(github_info)
+                    return True
             else:
                 # User chose manual creation
                 self.manual_repo_creation_instructions(github_info)
+                self.push_changes(github_info)
+                return True
 
         elif gh_available and gh_status == "not_authenticated":
             # gh is installed but not authenticated
@@ -499,14 +504,21 @@ AUTOPUSH_GUIDE.pdf
                 gh_available, gh_status = self.check_gh_cli()
                 if gh_available and gh_status == "authenticated":
                     if self.create_repo_with_gh_cli(github_info):
-                        pass
+                        self.push_changes(github_info)
+                        return True
                     else:
                         self.manual_repo_creation_instructions(github_info)
+                        self.push_changes(github_info)
+                        return True
                 else:
                     self.logger.warning("Authentication unsuccessful, using manual creation")
                     self.manual_repo_creation_instructions(github_info)
+                    self.push_changes(github_info)
+                    return True
             else:
                 self.manual_repo_creation_instructions(github_info)
+                self.push_changes(github_info)
+                return True
 
         else:
             # gh CLI not installed
@@ -521,6 +533,40 @@ AUTOPUSH_GUIDE.pdf
             print()
 
             self.manual_repo_creation_instructions(github_info)
+            self.push_changes(github_info)
+            return True
+
+    def push_changes(self, github_info):
+        """Push changes to GitHub"""
+        # Set merge strategy
+        self.logger.detail("Setting pull strategy to merge")
+        self.run_command("git config pull.rebase false")
+
+        # Pull license if added
+        if github_info['license']:
+            self.logger.detail("Pulling LICENSE file from GitHub...")
+            output, code = self.run_command("git pull origin main --allow-unrelated-histories", check=False)
+            if code == 0:
+                self.logger.success("Pulled LICENSE from GitHub")
+                self.actions_taken.append("Pulled LICENSE file from GitHub and merged")
+            else:
+                self.logger.warning(f"Pull returned: {output}")
+
+        # Push
+        self.logger.detail("Pushing to GitHub...")
+        output, code = self.run_command("git push -u origin main", check=False, capture=False)
+
+        if code == 0:
+            self.logger.success("Successfully pushed to GitHub!")
+            self.actions_taken.append("Pushed all commits to GitHub")
+            return True
+        else:
+            self.logger.error("Failed to push to GitHub")
+            self.logger.detail("Common issues:")
+            self.logger.detail("- Using GitHub password instead of Personal Access Token")
+            self.logger.detail("- Repository doesn't exist on GitHub")
+            self.logger.detail("- Network connectivity issues")
+            return False
 
     def manual_repo_creation_instructions(self, github_info):
         """Show manual repository creation instructions"""
@@ -540,41 +586,6 @@ AUTOPUSH_GUIDE.pdf
         print()
 
         input(f"{Colors.CYAN}Press ENTER when you've created the repository on GitHub...{Colors.RESET}")
-
-        # Set merge strategy
-        self.logger.detail("Setting pull strategy to merge")
-        self.run_command("git config pull.rebase false")
-
-        # Pull license if added
-        if github_info['license']:
-            self.logger.detail("Pulling LICENSE file from GitHub...")
-            output, code = self.run_command("git pull origin main --allow-unrelated-histories", check=False)
-            if code == 0:
-                self.logger.success("Pulled LICENSE from GitHub")
-                self.actions_taken.append("Pulled LICENSE file from GitHub and merged")
-            else:
-                self.logger.warning(f"Pull returned: {output}")
-
-        # Push
-        self.logger.detail("Pushing to GitHub...")
-        print(f"\n{Colors.BOLD}GitHub Authentication{Colors.RESET}")
-        print(f"Username: {Colors.GREEN}{github_info['username']}{Colors.RESET}")
-        print(f"Password: {Colors.YELLOW}Use your Personal Access Token (not your password!){Colors.RESET}")
-        print()
-
-        output, code = self.run_command("git push -u origin main", check=False, capture=False)
-
-        if code == 0:
-            self.logger.success("Successfully pushed to GitHub!")
-            self.actions_taken.append("Pushed all commits to GitHub")
-            return True
-        else:
-            self.logger.error("Failed to push to GitHub")
-            self.logger.detail("Common issues:")
-            self.logger.detail("- Using GitHub password instead of Personal Access Token")
-            self.logger.detail("- Repository doesn't exist on GitHub")
-            self.logger.detail("- Network connectivity issues")
-            return False
 
     def generate_documentation(self, github_info):
         """Generate detailed documentation of what was done"""
