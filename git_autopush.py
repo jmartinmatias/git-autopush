@@ -337,6 +337,14 @@ AUTOPUSH_GUIDE.pdf
         if not repo_name:
             repo_name = default_repo
 
+        # Visibility choice
+        print(f"\n{Colors.CYAN}Repository visibility:{Colors.RESET}")
+        print("  1. Private (default - only you can see it)")
+        print("  2. Public (everyone can see it)")
+
+        visibility_choice = input(f"{Colors.CYAN}Visibility [1]: {Colors.RESET}").strip() or "1"
+        visibility = "private" if visibility_choice == "1" else "public"
+
         # License choice
         print(f"\n{Colors.CYAN}Choose a license:{Colors.RESET}")
         print("  1. MIT (recommended - most permissive)")
@@ -356,11 +364,13 @@ AUTOPUSH_GUIDE.pdf
         info = {
             'username': username,
             'repo_name': repo_name,
+            'visibility': visibility,
             'license': license_type,
             'url': f"https://github.com/{username}/{repo_name}.git"
         }
 
         self.logger.detail(f"Repository: {username}/{repo_name}")
+        self.logger.detail(f"Visibility: {visibility}")
         self.logger.detail(f"URL: {info['url']}")
         self.logger.detail(f"License: {license_type or 'None'}")
 
@@ -412,8 +422,9 @@ AUTOPUSH_GUIDE.pdf
         """Create GitHub repository using GitHub CLI"""
         self.logger.info("Attempting to create repository using GitHub CLI...")
 
-        # Build gh repo create command
-        cmd = f"gh repo create {github_info['repo_name']} --public"
+        # Build gh repo create command (private by default)
+        visibility = github_info.get('visibility', 'private')
+        cmd = f"gh repo create {github_info['repo_name']} --{visibility}"
 
         # Add license if specified
         if github_info['license']:
@@ -575,14 +586,15 @@ AUTOPUSH_GUIDE.pdf
         print(f"Please create the repository manually:")
         print(f"\n1. Go to: {Colors.CYAN}https://github.com/new{Colors.RESET}")
         print(f"2. Repository name: {Colors.GREEN}{github_info['repo_name']}{Colors.RESET}")
-        print(f"3. Options:")
+        print(f"3. Visibility: {Colors.GREEN}{github_info.get('visibility', 'private').upper()}{Colors.RESET}")
+        print(f"4. Options:")
         print(f"   {Colors.RED}☐ Don't{Colors.RESET} check 'Add a README file'")
         print(f"   {Colors.RED}☐ Don't{Colors.RESET} check 'Add .gitignore'")
         if github_info['license']:
             print(f"   {Colors.GREEN}☑{Colors.RESET} Choose a license: {Colors.GREEN}{github_info['license']}{Colors.RESET}")
         else:
             print(f"   {Colors.YELLOW}☐{Colors.RESET} Choose a license: None")
-        print(f"4. Click 'Create repository'")
+        print(f"5. Click 'Create repository'")
         print()
 
         input(f"{Colors.CYAN}Press ENTER when you've created the repository on GitHub...{Colors.RESET}")
